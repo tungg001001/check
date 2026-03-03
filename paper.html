@@ -2,7 +2,7 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<title>升級版文章比對工具</title>
+<title>文章比對工具（n-gram 近似）</title>
 <style>
 body { font-family: Arial; margin: 30px; }
 textarea { width: 100%; height: 150px; margin-bottom: 20px; }
@@ -14,7 +14,7 @@ tr.high-similarity { background-color: #ffcccc; }
 </head>
 <body>
 
-<h2>升級版文章比對工具（純網頁）</h2>
+<h2>文章比對工具（n-gram 近似比對）</h2>
 
 <label>文章 1：</label><br>
 <textarea id="text1"></textarea><br>
@@ -23,7 +23,7 @@ tr.high-similarity { background-color: #ffcccc; }
 <textarea id="text2"></textarea><br>
 
 <label>相似度門檻 (%): </label>
-<input type="number" id="threshold" value="70" min="0" max="100"><br><br>
+<input type="number" id="threshold" value="60" min="0" max="100"><br><br>
 
 <button onclick="compare()">比對文章</button>
 
@@ -36,19 +36,22 @@ tr.high-similarity { background-color: #ffcccc; }
 </tr>
 </table>
 
-<script src="https://unpkg.com/jieba-js/dist/jieba.min.js"></script>
 <script>
-// 中文分詞 + Jaccard 相似度
-function tokenize(text) {
-    text = text.replace(/\s+/g,''); // 去空格
-    return jieba.cut(text); // jieba-js 分詞
+// 生成 n-gram 集合
+function ngramSet(text, n=3) {
+    let grams = new Set();
+    for (let i=0; i<=text.length-n; i++) {
+        grams.add(text.slice(i, i+n));
+    }
+    return grams;
 }
 
-function jaccardSimilarity(text1, text2) {
-    const words1 = new Set(tokenize(text1));
-    const words2 = new Set(tokenize(text2));
-    const intersection = new Set([...words1].filter(x => words2.has(x)));
-    const union = new Set([...words1, ...words2]);
+// 計算 n-gram Jaccard 相似度
+function ngramSimilarity(text1, text2, n=3) {
+    const set1 = ngramSet(text1, n);
+    const set2 = ngramSet(text2, n);
+    const intersection = new Set([...set1].filter(x => set2.has(x)));
+    const union = new Set([...set1, ...set2]);
     return union.size ? intersection.size / union.size : 0;
 }
 
@@ -67,7 +70,7 @@ function compare() {
         let maxSim = 0;
         let matched = "";
         para2.forEach(p2 => {
-            let sim = jaccardSimilarity(p1,p2);
+            let sim = ngramSimilarity(p1,p2,3);
             if (sim > maxSim) {
                 maxSim = sim;
                 matched = p2;
